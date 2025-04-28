@@ -7,7 +7,7 @@
 :x:
 -->
 
-|  function  |  code  |  code validation  |  memory validation  |
+| function | code | validation | memory validation |
 | ------ | ------ | ----------------- | ------------------- |
 |BP_init|:x:|:x:|:x:|:x:|
 |BP_predict|:x:|:x:|:x:|:x:|
