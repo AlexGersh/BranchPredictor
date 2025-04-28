@@ -3,6 +3,8 @@
 
 #include "bp_api.h"
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 //-----------DEFINES AND MACROS-----------//
 #define NEW -1
@@ -18,14 +20,15 @@
 
 typedef enum { SNT, WNT, WT, ST } FSM_ST; // FSM States
 typedef enum { not_using_share, using_share_lsb, using_share_mid } ShareMode;
-
+typedef char* fsm_p;
 //-----------STRUCTS-----------//
 typedef struct {
     uint32_t tag;
     uint32_t target;
     uint8_t history;
-    FSM_ST *fsm_pointer;
+    fsm_p fsm_pointer;
 } Btb_row_t;
+
 
 typedef struct {
     unsigned size;            // size of the BTB table [num of rows]
@@ -36,6 +39,7 @@ typedef struct {
     ShareMode share_mode;
     FSM_ST fsm_init_st;
 
+    fsm_p   predictor_table;
     Btb_row_t *table;
 
 } Btb_t;
@@ -57,8 +61,11 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     if (!isBbtbSizeValid(btbSize) || !isHistSizeValid(historySize) ||
         !isTagSizeValid(tagSize, btbSize) || !isFsmInitStateValid(fsmState) ||
         !isSharedValid(Shared))
-        return -1;
-
+        {
+            return -1;
+        }
+    
+    const int predictor_array_size=historySize*sizeof(char);
     // initializing
     my_btb.size = btbSize;
     my_btb.history_size = historySize;
@@ -68,19 +75,33 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     my_btb.usingGlobalFSMTable = isGlobalTable;
     my_btb.share_mode = (ShareMode)Shared;
 
-    my_btb.table = malloc(my_btb.size * sizeof(Btb_row_t));
+    my_btb.table = (Btb_row_t*)malloc(my_btb.size * sizeof(Btb_row_t));
     if (!my_btb.table)
+    {
+        fprintf(stderr,"faild to malloc size of table");
         return -1; // allocation error
-
-    if (isGlobalTable) {
-        //
     }
 
-    // else local table
-    my_btb.table->fsm_pointer = malloc(sizeof(FSM_ST));
-
+    my_btb.predictor_table=(fsm_p)malloc((isGlobalHist ? 1:my_btb.size)
+                                *predictor_array_size);
+    if (!my_btb.predictor_table)
+    {
+        fprintf(stderr,"faild to malloc size of table");
+        return -1; // allocation error
+    }
+    for(int i=0;i<sizeof(my_btb.predictor_table);i++)
+    {
+        my_btb.predictor_table[i]=my_btb.fsm_init_st;
+    }
+    
+  
     for (int i = 0; i < my_btb.size; i++) {
         my_btb.table[i].tag = NEW;
+        my_btb.table[i].target=0;
+        my_btb.table[i].history=0;
+        //if global history all fsm_pointer points to same table
+        my_btb.table[i].fsm_pointer=my_btb.predictor_table+
+                                    (isGlobalHist?0:i*predictor_array_size);
     }
 
     return 0; // success
@@ -103,7 +124,7 @@ void BP_GetStats(SIM_stats *curStats) {
 //-----------FUNC DEFS-----------//
 
 bool isBbtbSizeValid(unsigned btbSize) {
-    bool flag;
+    bool flag=false;
     switch (btbSize) {
     case 1:
     case 2:
@@ -112,8 +133,7 @@ bool isBbtbSizeValid(unsigned btbSize) {
     case 16:
     case 32:
         flag = true;
-    default:
-        flag = false;
+        break;
     }
     return flag;
 }
