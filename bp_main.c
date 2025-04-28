@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-//test
 #include "bp_api.h"
 
 int main(int argc, char **argv) {
