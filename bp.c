@@ -115,11 +115,10 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
 
     *dst = pc + 4;
     uint32_t ip = getIProwFromPC(pc);
-    uint32_t tag = getTagFromPC(pc);
     Btb_row_t *row = &my_btb.table[ip];
 
-    //if not new
-    if (!my_btb.table[ip].tag == NEW) {
+    // if not new
+    if (!(my_btb.table[ip].tag == NEW)) {
         prediction = row->fsm_pointer[row->history];
         *dst = row->target;
     }
@@ -213,31 +212,30 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
     return;
 }
 
-void printBTB()
-{
+void printBTB() {
 
     printf("BTB Configuration:\n");
     printf("Size: %u\n", my_btb.size);
     printf("History Size: %u bits\n", my_btb.history_size);
     printf("Tag Size: %u bits\n", my_btb.tag_size);
-    printf("Using Global History: %s\n", my_btb.usingGlobalHistory ? "Yes" : "No");
-    printf("Using Global FSM Table: %s\n", my_btb.usingGlobalFSMTable ? "Yes" : "No");
+    printf("Using Global History: %s\n",
+           my_btb.usingGlobalHistory ? "Yes" : "No");
+    printf("Using Global FSM Table: %s\n",
+           my_btb.usingGlobalFSMTable ? "Yes" : "No");
     printf("Share Mode: %d\n", my_btb.share_mode);
     printf("Initial FSM State: %d\n", my_btb.fsm_init_st);
-    printf("PredictorTable %p\n",my_btb.predictor_table);
+    printf("PredictorTable %p\n", my_btb.predictor_table);
 
     printf("\nBTB Rows:\n");
-    Btb_row_t* row=NULL;
-    for (int  i = 0; i < my_btb.size; ++i) {
+    Btb_row_t *row = NULL;
+    for (int i = 0; i < my_btb.size; ++i) {
         row = &my_btb.table[i];
         printf("Row %u:\n", i);
         printf("  Tag: 0x%x", row->tag);
         printf("  Target: 0x%x", row->target);
         printf("  History: 0x%x", row->history);
         // Optional: print FSM pointer or content, depending on implementation
-        printf("  FSM Pointer: %p\n", (void*)row->fsm_pointer);
-
+        printf("  FSM Pointer: %p\n", (void *)row->fsm_pointer);
     }
-    prtinf("----\n");
-
+    printf("----\n");
 }
