@@ -53,10 +53,11 @@ bool isTagSizeValid(unsigned tag_size, unsigned btb_size);
 bool isFsmInitStateValid(unsigned fsm_init_state);
 bool isSharedValid(int shared);
 bool isPCValid(uint32_t);
+
 uint32_t getIProwFromPC(uint32_t);
 uint32_t getTagFromPC(uint32_t);
-void setBtbRow(Btb_row_t*,uint32_t tag,uint32_t target,uint8_t history,fsm_p fsm_pointer);
-
+void setBtbRow(Btb_row_t *, uint32_t tag, uint32_t target, uint8_t history,
+               fsm_p fsm_pointer);
 
 // not finished yet
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
@@ -95,46 +96,41 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     }
 
     for (int i = 0; i < my_btb.size; i++) {
-        
-        fsm_p fsm_pointer=
-            my_btb.predictor_table +
-            (isGlobalHist ? 0 : i * predictor_array_size);
-        setBtbRow(&my_btb.table[i],NEW,0,0, fsm_pointer);
+
+        fsm_p fsm_pointer = my_btb.predictor_table +
+                            (isGlobalHist ? 0 : i * predictor_array_size);
+        setBtbRow(&my_btb.table[i], NEW, 0, 0, fsm_pointer);
     }
 
     return 0; // success
 }
 
 // not finished yet
-bool BP_predict(uint32_t pc, uint32_t *dst)
-{
-    bool decision=false;
-    if(!isPCValid(pc))
-    {
+bool BP_predict(uint32_t pc, uint32_t *dst) {
+    bool prediction = false;
+    if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
     }
-    *dst=pc+4;
-    uint32_t ip=getIProwByPC(pc);
-    uint32_t tag=getTagFromPC(pc);
-    Btb_row_t* row=&my_btb.table[ip];
-    //taking new branch
-    if(my_btb.table[ip].tag==NEW)
-    {
-        setBtbRow(row,tag,0
-            ,my_btb.fsm_init_st,row->fsm_pointer);
+
+    *dst = pc + 4;
+    uint32_t ip = getIProwByPC(pc);
+    uint32_t tag = getTagFromPC(pc);
+    Btb_row_t *row = &my_btb.table[ip];
+
+    // taking new branch
+    if (my_btb.table[ip].tag == NEW) {
+        setBtbRow(row, tag, 0, my_btb.fsm_init_st, row->fsm_pointer);
 
     }
-    //branch in btb
-    else
-    {
-        //calculating decision
-        decision=row->fsm_pointer[row->history];
-        dst=row->target;
-
+    // branch in btb
+    else {
+        // calculating prediction
+        prediction = row->fsm_pointer[row->history];
+        dst = row->target;
     }
 
-    return decision;
-} 
+    return prediction;
+}
 
 // not finished yet
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
@@ -207,4 +203,17 @@ uint32_t getTagFromPC(uint32_t pc) {
     uint32_t mask = (1U << tag_size) - 1;
 
     return mask & pc;
+}
+
+bool isPCValid(uint32_t pc) { return !(pc % 4); }
+
+void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
+               uint8_t history, fsm_p fsm_pointer) {
+
+    btb_row->tag = tag;
+    btb_row->target = target;
+    btb_row->history = history;
+    btb_row->fsm_pointer = fsm_pointer;
+
+    return;
 }
