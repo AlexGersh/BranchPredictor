@@ -176,18 +176,16 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 
     uint32_t ip = getIProwFromPC(pc);
     uint32_t tag = getTagFromPC(pc);
-    uint8_t history = 0;
+    uint8_t new_history = 0;
     Btb_row_t *row = &my_btb.table[ip];
 
     if (!(my_btb.table[ip].tag == NEW)) {
         updatePredictor(row, ip, taken, false);
-        row->history = (row->history << 1) | (taken ? 1 : 0);
-        return;
+    } else { // we add new pc to btb
+        setBtbRow(row, tag, targetPc, new_history, row->fsm_pointer);
+        updatePredictor(row, ip, taken, true);
     }
-
-    // else we add new pc to btb
-    setBtbRow(row, tag, targetPc, history, row->fsm_pointer);
-    updatePredictor(row, ip, taken, true);
+    row->history = (row->history << 1) | (taken ? 1 : 0);
 }
 
 // not finished yet
