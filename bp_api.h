@@ -53,6 +53,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst);
  */
 void BP_GetStats(SIM_stats *curStats);
 
+void printBTB();
 
 #ifdef __cplusplus
 }
