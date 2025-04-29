@@ -156,3 +156,24 @@ bool isSharedValid(int shared) {
         return true;
     return false;
 }
+
+uint32_t getIProwFromPC(uint32_t pc) {
+    int bits = H_TO_BITS(my_btb.size);
+
+    uint32_t mask = 0x1F;      // maximum mask we will have
+    mask = mask >> (5 - bits); // get only the relevant bits
+    pc = pc >> 2;
+    return mask & pc;
+}
+
+uint32_t getTagFromPC(uint32_t pc) {
+    int tag_size = my_btb.tag_size;
+    int num_end_bits = 2 + H_TO_BITS(my_btb.size); // discard alignment + index
+
+    pc = pc >> num_end_bits; // shift out index & alignment
+
+    // Make a mask with tag_size bits set
+    uint32_t mask = (1U << tag_size) - 1;
+
+    return mask & pc;
+}
