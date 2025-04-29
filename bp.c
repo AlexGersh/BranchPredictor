@@ -9,8 +9,8 @@
 //-----------DEFINES AND MACROS-----------//
 #define NEW -1
 
-//function return h.
-//  h=sqrt(n)
+// function return h.
+//   h=sqrt(n)
 #define H_TO_BITS(n)                                                           \
     ((n) == 1    ? 0                                                           \
      : (n) == 2  ? 1                                                           \
@@ -20,10 +20,10 @@
      : (n) == 32 ? 5                                                           \
                  : -1) // -1 invalid input
 
-
 typedef enum { SNT, WNT, WT, ST } FSM_ST; // FSM States
 typedef enum { not_using_share, using_share_lsb, using_share_mid } ShareMode;
 typedef char *fsm_p;
+
 //-----------STRUCTS-----------//
 typedef struct {
     uint32_t tag;
@@ -38,11 +38,11 @@ typedef struct {
     unsigned tag_size;        // tag size [bits]
     bool usingGlobalHistory;  // if false --> local history
     bool usingGlobalFSMTable; // if false --> local FSM Table
-    ShareMode share_mode;       
-    FSM_ST fsm_init_st;      //how to init all bimodal predictors
+    ShareMode share_mode;
+    FSM_ST fsm_init_st; // how to init all bimodal predictors
 
-    fsm_p predictor_table;  //table of all predictors
-    Btb_row_t *table;       //BTB table
+    fsm_p predictor_table; // table of all predictors
+    Btb_row_t *table;      // BTB table
 
 } Btb_t;
 
@@ -54,43 +54,43 @@ Btb_t my_btb;
 // function check if btbSize is valid
 bool isBbtbSizeValid(unsigned btbSize);
 
-//function check is history size is valid
+// function check is history size is valid
 bool isHistSizeValid(unsigned hist_size);
 
-//function check if tag size is valid.
+// function check if tag size is valid.
 bool isTagSizeValid(unsigned tag_size, unsigned btb_size);
 
-//function check if the inital fsm state is valid
+// function check if the inital fsm state is valid
 bool isFsmInitStateValid(unsigned fsm_init_state);
 
-//function check if shared_value_state is valid
+// function check if shared_value_state is valid
 bool isSharedValid(int shared);
 
-//fucntion check if pc valid
+// fucntion check if pc valid
 bool isPCValid(uint32_t);
 
-//function calculate the IP(row index) of PC address.
+// function calculate the IP(row index) of PC address.
 //@param: uint32_t - valid pc address
-//return - uint32_t - IP
+// return - uint32_t - IP
 uint32_t getIProwFromPC(uint32_t);
 
-//function calculate the TAG of PC address.
+// function calculate the TAG of PC address.
 //@param: uint32_t - valid pc address.
-//return - uint32_t - TAG
+// return - uint32_t - TAG
 uint32_t getTagFromPC(uint32_t);
 
-//function gets pointer to row in the BTB. the function sets the row
+// function gets pointer to row in the BTB. the function sets the row
 //@params: BTB_row_t* row - row in the btb
-//                    others - valid params to set the row.
+//                     others - valid params to set the row.
 void setBtbRow(Btb_row_t *, uint32_t tag, uint32_t target, uint8_t history,
                fsm_p fsm_pointer);
 
-               //function print BTB. for debugging- if you read this we forgot to delete this
+// function print BTB. for debugging- if you read this we forgot to delete this
 void printBTB();
 
-//function update the predictor of given row according to if branch is taken or not
-void updatePredictor(Btb_row_t* row,bool taken);
-
+// function update the predictor of given row according to if branch is taken or
+// not
+void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken, bool);
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
             unsigned fsmState, bool isGlobalHist, bool isGlobalTable,
@@ -111,33 +111,33 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     my_btb.usingGlobalFSMTable = isGlobalTable;
     my_btb.share_mode = (ShareMode)Shared;
 
-    //BTB_SIZE=btbSize*Row_SIZE
+    // BTB_SIZE=btbSize*Row_SIZE
     my_btb.table = (Btb_row_t *)malloc(my_btb.size * sizeof(Btb_row_t));
-    
+
     if (!my_btb.table) {
         fprintf(stderr, "faild to malloc size of table\n");
         return -1; // allocation error
     }
 
-    //if Global history
-    //predictor array is shared and predictor_arr_size=historySize*fsm_size
-    //if local history
-    //predictor array is not shared and predictor_arr_size=historySize*fsm_size*Num_of_BTB_rows
+    /* if Global history:
+        predictor array is shared and predictor_arr_size = historySize*fsm_size
+       if local history
+        predictor array is not shared and
+        predictor_arr_size=historySize*fsm_size*Num_of_BTB_rows*/
     my_btb.predictor_table =
         (fsm_p)malloc((isGlobalHist ? 1 : my_btb.size) * predictor_array_size);
-    
+
     if (!my_btb.predictor_table) {
         fprintf(stderr, "faild to malloc size of table\n");
         return -1; // allocation error
     }
 
-    //init the predictors fsm
+    // init the predictors fsm
     for (int i = 0; i < sizeof(my_btb.predictor_table); i++) {
         my_btb.predictor_table[i] = my_btb.fsm_init_st;
     }
 
     for (int i = 0; i < my_btb.size; i++) {
-
         fsm_p fsm_pointer = my_btb.predictor_table +
                             (isGlobalHist ? 0 : i * predictor_array_size);
         setBtbRow(&my_btb.table[i], NEW, 0, 0, fsm_pointer);
@@ -146,7 +146,6 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     return 0; // success
 }
 
-// not finished yet
 bool BP_predict(uint32_t pc, uint32_t *dst) {
     bool prediction = false;
     if (!isPCValid(pc)) {
@@ -169,26 +168,24 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
 
 // not finished yet
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
-    
+
     if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
         return -1;
     }
 
     uint32_t ip = getIProwFromPC(pc);
-    uint32_t tag= getTagFromPC(pc);
-    uint8_t history=0;
-    Btb_row_t* row=&my_btb.table[ip];
-    
-    if(!(my_btb.table[ip].tag==NEW))
-    {
-        updatePredictor(row,taken);
-        row->history=row->history<<1 + ( taken ? 1 : 0 );
-        
+    uint32_t tag = getTagFromPC(pc);
+    uint8_t new_history = 0;
+    Btb_row_t *row = &my_btb.table[ip];
+
+    if (!(my_btb.table[ip].tag == NEW)) {
+        updatePredictor(row, ip, taken, false);
+    } else { // we add new pc to btb
+        setBtbRow(row, tag, targetPc, new_history, row->fsm_pointer);
+        updatePredictor(row, ip, taken, true);
     }
-
-    setBtbRow(row,tag,targetPc,history,row->fsm_pointer);
-
+    row->history = (row->history << 1) | (taken ? 1 : 0);
 }
 
 // not finished yet
@@ -300,10 +297,20 @@ void printBTB() {
     printf("----\n");
 }
 
+void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken,
+                     bool isBranchNew) {
+    int history_masked = ((1U << my_btb.history_size) - 1) & row->history;
+    int fsm_addr = row->fsm_pointer + history_masked;
+    FSM_ST fsm_init_st = my_btb.fsm_init_st;
 
-void updatePredictor(Btb_row_t* row,uint32_t ip,bool taken)
-{
-    int history_masked=( (1U<<my_btb.history_size)-1)&row->history;
-    int fsm_addr=fsm_arr_pointer + history_masked;
-    my_btb.predictor_table[fsm_addr];
+    if (!isBranchNew) {
+        if (taken) {
+            if (my_btb.predictor_table[fsm_addr] < ST)
+                my_btb.predictor_table[fsm_addr]++;
+        } else { // not taken
+            if (my_btb.predictor_table[fsm_addr] > SNT)
+                my_btb.predictor_table[fsm_addr]--;
+        }
+    } else // the pc is new
+        my_btb.predictor_table[fsm_addr] = fsm_init_st + (taken ? 1 : 0);
 }
