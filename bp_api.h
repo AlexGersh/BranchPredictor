@@ -18,12 +18,12 @@ typedef struct {
 	unsigned size;		      // Theoretical allocated BTB and branch predictor size
 } SIM_stats;
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
     #define DEBUG_COMMAND(X) X
 #else
-    #define DEBUG_COMMAND()// No-op
+    #define DEBUG_COMMAND(X)// No-op
 #endif
 /*************************************************************************/
 /* The following functions should be implemented in your bp.c (or .cpp) */

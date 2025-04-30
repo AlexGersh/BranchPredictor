@@ -26,8 +26,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Error in input file: cannot read config\n");
 		exit(3);
 	}
-	//DEBUG
-	printf("%s\n",line);
+
+	DEBUG_COMMAND(("%s\n",line);)
 	
 	char *elemnts[7];
 	int i = 0;
@@ -111,10 +111,10 @@ int main(int argc, char **argv) {
 		
 		BP_update(pc, targetPc, taken, dst);
 		//DEBUG
-		printBTB();
+		DEBUG_COMMAND(printBTB(););
 	}
 	//DEBUG
-	printBTB();
+	DEBUG_COMMAND(printBTB(););
 	SIM_stats stats;
 	BP_GetStats(&stats);
 	printf("flush_num: %d, br_num: %d, size: %db\n", stats.flush_num, stats.br_num, stats.size);

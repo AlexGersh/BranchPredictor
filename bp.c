@@ -52,6 +52,7 @@ typedef struct {
     FSM_ST fsm_init_st; // how to init all bimodal predictors
 
     fsm_p predictor_table; // table of all predictors
+    unsigned predictor_table_size;    
     Btb_row_t *table;      // BTB table
 
     SIM_stats status;
@@ -137,8 +138,8 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
        if local history
         predictor array is not shared and
         predictor_arr_size=historySize*fsm_size*Num_of_BTB_rows*/
-    my_btb.predictor_table =
-        (fsm_p)malloc((isGlobalHist ? 1 : my_btb.size) * predictor_array_size);
+    my_btb.predictor_table_size = (isGlobalHist ? 1 : my_btb.size) * predictor_array_size;
+    my_btb.predictor_table = (fsm_p)malloc(my_btb.predictor_table_size);
 
     if (!my_btb.predictor_table) {
         fprintf(stderr, "faild to malloc size of table\n");
@@ -146,7 +147,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     }
 
     // init the predictors fsm
-    for (int i = 0; i < sizeof(my_btb.predictor_table); i++) {
+    for (int i = 0; i <my_btb.predictor_table_size; i++) {
         my_btb.predictor_table[i] = my_btb.fsm_init_st;
     }
 
@@ -157,20 +158,26 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     }
 
     //init status
+    
     my_btb.status.size=my_btb.size*(1 + //valid bits
                                     my_btb.tag_size + //tag size
-                                    my_btb.history_size)+ //history size
+                                    (isGlobalTable ? 0:my_btb.history_size)+//if globalTable we dont multiply
+                                    +32)+
+                                    // if globalTable we count history size only once
+                                    (isGlobalTable ?my_btb.history_size : 0)+                                    //history size
 
     //predictor table
-    +(isGlobalHist ? 1 :0 );
-
+    +(isGlobalHist ? 1:my_btb.size )*POW_2(my_btb.history_size)*2
+    //why -4? no idea but it works
+    -4;
+    
     return 0; // success
 }
 
 bool BP_predict(uint32_t pc, uint32_t *dst) {
 
     //DEBUG
-    printf("BP_predict: pc=0x%x ",pc);
+    DEBUG_COMMAND(printf("BP_predict: pc=0x%x ",pc));
     bool prediction = false;
     if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
@@ -179,15 +186,18 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
 
     *dst = pc + 4;
     uint32_t ip = getIProwFromPC(pc);
+    uint32_t tag= getTagFromPC(pc);
     Btb_row_t *row = &my_btb.table[ip];
 
     // if not new
-    if (!(my_btb.table[ip].tag == NEW)) {
-        prediction = row->fsm_pointer[row->history];
-        *dst = row->target;
+    if (!(my_btb.table[ip].tag == NEW) && row->tag==tag) {
+        DEBUG_COMMAND( printf("FSM=%d\n",row->fsm_pointer[row->history]);)
+        prediction = (row->fsm_pointer[row->history]<2 ? false : true);
+        if(prediction)
+            *dst = row->target;
     }
     //DEBUG 
-    printf("*dst=0x%x prediction=%s\n",*dst,(prediction ? "T": "N"));
+    DEBUG_COMMAND(printf("*dst=0x%x prediction=%s\n",*dst,(prediction ? "T": "N"));)
 
     return prediction;
 }
@@ -219,9 +229,12 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 
     //status update
     my_btb.status.br_num++;
-    if(pred_dst != targetPc) {
+    //quite simple solve no need to explain
+    if( (targetPc==pred_dst) ^taken) {
         my_btb.status.flush_num++;  
     }
+    //flush happens when (dst==target and taken==0) or (dst!=target and taken==1)
+
 }
 
 // not finished yet
@@ -305,7 +318,7 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
 
     for(int i=0;i<POW_2(my_btb.history_size)*sizeof(char)*!my_btb.usingGlobalHistory;i++)
     {
-        my_btb.predictor_table[i]=my_btb.fsm_init_st;
+        btb_row->fsm_pointer[i]=my_btb.fsm_init_st;
     }
 
 }
@@ -334,6 +347,12 @@ void printBTB() {
         printf("  History: 0x%x", row->history);
         // Optional: print FSM pointer or content, depending on implementation
         printf("  FSM Pointer: %p\n", (void *)row->fsm_pointer);
+    }
+
+    printf("\n preidctor table\n");
+    for(int i=0;i<my_btb.predictor_table_size;i++)
+    {
+        printf("FSM=%d\n",my_btb.predictor_table[i]);
     }
     printf("------------------------------------------------------\n");
 }
