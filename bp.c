@@ -378,10 +378,15 @@ void printBTB() {
     }
 
     printf("\n preidctor table\n");
+    int j=0;
     for (int i = 0; i < my_btb.predictor_table_size; i++) {
-        printf("FSM=%d\n", my_btb.predictor_table[i]);
+        if(j++==POW_2(my_btb.history_size)){
+            j=0;
+            printf("\n");
+        }
+        printf("FSM=%d ", my_btb.predictor_table[i]);
     }
-    printf("------------------------------------------------------\n");
+    printf("\n------------------------------------------------------\n");
 }
 
 void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken) {
