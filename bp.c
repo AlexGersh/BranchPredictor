@@ -54,6 +54,8 @@ typedef struct {
     fsm_p predictor_table; // table of all predictors
     Btb_row_t *table;      // BTB table
 
+    SIM_stats status;
+
 } Btb_t;
 
 //-----------VARIABLES-----------//
@@ -121,7 +123,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     my_btb.usingGlobalHistory = isGlobalHist ? 1:0;
     my_btb.usingGlobalFSMTable = isGlobalTable;
     my_btb.share_mode = (ShareMode)Shared;
-
+    my_btb.status=(SIM_stats){0, 0, 0}; // init stats to 0
     // BTB_SIZE=btbSize*Row_SIZE
     my_btb.table = (Btb_row_t *)malloc(my_btb.size * sizeof(Btb_row_t));
 
@@ -154,6 +156,9 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
         setBtbRow(&my_btb.table[i], NEW, 0, 0, fsm_pointer);
     }
 
+    //init status
+
+    
     return 0; // success
 }
 
@@ -200,6 +205,12 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
     }
 
     row->history = (row->history << 1) | (taken ? 1 : 0);
+
+    //status update
+    my_btb.status.br_num++;
+    if(pred_dst != targetPc) {
+        my_btb.status.flush_num++;  
+    }
 }
 
 // not finished yet
