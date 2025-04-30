@@ -235,8 +235,14 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
         updatePredictor(row, ip, taken);
     }
 
-    row->history = (row->history << 1) | (taken ? 1 : 0);
-
+    if(my_btb.usingGlobalHistory){
+        for(int i=0;my_btb.size;i++)
+        {
+            my_btb.table->history=(row->history << 1) | (taken ?1 :0);
+        }
+    } else {
+        row->history = (row->history << 1) | (taken ? 1 : 0);
+    }
     // status update
     my_btb.status.br_num++;
     // quite simple solve no need to explain
@@ -252,6 +258,11 @@ void BP_GetStats(SIM_stats *curStats) {
     curStats->br_num = my_btb.status.br_num;
     curStats->flush_num = my_btb.status.flush_num;
     curStats->size = my_btb.status.size;
+    
+    //freeing all memory
+    free(my_btb.table);
+    free(my_btb.predictor_table);
+    
 }
 
 //-----------FUNC DEFS-----------//
@@ -323,7 +334,8 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
 
     btb_row->tag = tag;
     btb_row->target = target;
-    btb_row->history = history;
+    if(!my_btb.usingGlobalHistory)
+        btb_row->history = history;
     btb_row->fsm_pointer = fsm_pointer;
 
     for (int i = 0; i < POW_2(my_btb.history_size) * sizeof(char) *
