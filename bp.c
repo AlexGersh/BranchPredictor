@@ -111,9 +111,9 @@ void printBTB();
 // not
 void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken);
 
-//function calculate the index of fsm relative to its fsm_pointer.
-//in calulation take in a count if using_shard_lsb or using_shard_mid active
-uint8_t getIndexFSM(Btb_row_t*,uint32_t);
+// function calculate the index of fsm relative to its fsm_pointer.
+// in calulation take in a count if using_shard_lsb or using_shard_mid active
+uint8_t getIndexFSM(Btb_row_t *, uint32_t);
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
             unsigned fsmState, bool isGlobalHist, bool isGlobalTable,
             int Shared) {
@@ -240,11 +240,10 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
         updatePredictor(row, ip, taken);
     }
 
-    if(my_btb.usingGlobalHistory){
-        for(int i=0;i<my_btb.size;i++)
-        {
-        //row->history = (row->history << 1) | (taken ? 1 : 0);
-            (my_btb.table[i]).history=(row->history << 1) | (taken ?1 :0);
+    if (my_btb.usingGlobalHistory) {
+        for (int i = 0; i < my_btb.size; i++) {
+            // row->history = (row->history << 1) | (taken ? 1 : 0);
+            (my_btb.table[i]).history = (row->history << 1) | (taken ? 1 : 0);
         }
     } else {
         row->history = (row->history << 1) | (taken ? 1 : 0);
@@ -264,11 +263,10 @@ void BP_GetStats(SIM_stats *curStats) {
     curStats->br_num = my_btb.status.br_num;
     curStats->flush_num = my_btb.status.flush_num;
     curStats->size = my_btb.status.size;
-    
-    //freeing all memory
+
+    // freeing all memory
     free(my_btb.table);
     free(my_btb.predictor_table);
-    
 }
 
 //-----------FUNC DEFS-----------//
@@ -340,7 +338,7 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
 
     btb_row->tag = tag;
     btb_row->target = target;
-    if(!my_btb.usingGlobalHistory)
+    if (!my_btb.usingGlobalHistory)
         btb_row->history = history;
     btb_row->fsm_pointer = fsm_pointer;
 
@@ -378,10 +376,10 @@ void printBTB() {
     }
 
     printf("\n preidctor table\n");
-    int j=0;
+    int j = 0;
     for (int i = 0; i < my_btb.predictor_table_size; i++) {
-        if(j++==POW_2(my_btb.history_size)){
-            j=0;
+        if (j++ == POW_2(my_btb.history_size)) {
+            j = 0;
             printf("\n");
         }
         printf("FSM=%d ", my_btb.predictor_table[i]);
@@ -420,5 +418,8 @@ uint8_t getIndexFSM(Btb_row_t *row, uint32_t pc) {
         break;
     }
     pc &= mask;
-    return index_masked ^= pc;
+    index_masked ^= pc;
+    DEBUG_COMMAND(printf("\npc=0x%x, index=0x%x\n", pc, index_masked););
+
+    return index_masked;
 }
