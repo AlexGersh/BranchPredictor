@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 		exit(3);
 	}
 	//DEBUG
-	printf("%s\n",line);
+	//printf("%s\n",line);
 	
 	char *elemnts[7];
 	int i = 0;
@@ -110,10 +110,10 @@ int main(int argc, char **argv) {
 		
 		BP_update(pc, targetPc, taken, dst);
 		//DEBUG
-		printBTB();
+		//printBTB();
 	}
 	//DEBUG
-	printBTB();
+	//printBTB();
 	SIM_stats stats;
 	BP_GetStats(&stats);
 	printf("flush_num: %d, br_num: %d, size: %db\n", stats.flush_num, stats.br_num, stats.size);
