@@ -9,10 +9,10 @@
 
 | function | code | validation | memory validation |
 | ------ | ------ | ----------------- | ------------------- |
-|BP_init|:white_check_mark:|:x:|:x:|:x:|
-|BP_predict|:x:|:x:|:x:|:x:|
-|BP_update|:x:|:x:|:x:|:x:|
-|BP_GetStats|:x:|:x:|:x:|:x:|
+|BP_init|:white_check_mark:|:white_check_mark:|:x:|
+|BP_predict|:white_check_mark:|:white_check_mark:|:x:|
+|BP_predict|:white_check_mark:|:x:|:x:|
+|BP_GetStats|:x:|:x:|:x:|
 
 
 # Tasks
