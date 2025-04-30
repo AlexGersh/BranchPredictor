@@ -111,6 +111,9 @@ void printBTB();
 // not
 void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken);
 
+//function calculate the index of fsm relative to its fsm_pointer.
+//in calulation take in a count if using_shard_lsb or using_shard_mid active
+uint8_t getIndexFSM(Btb_row_t*,uint32_t);
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
             unsigned fsmState, bool isGlobalHist, bool isGlobalTable,
             int Shared) {
