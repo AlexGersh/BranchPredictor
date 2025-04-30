@@ -10,7 +10,7 @@
 #define NEW -1
 
 /* we need to save to btb table only 30 bits and not 32, because we know that
-   every addres is 32 bits and has 2 zeros at the end for alignment/
+   every address is 32 bits and has 2 zeros at the end for alignment.
    So we will save only 30 bits of target at BTB table */
 #define TARGET_BITS_COUNT 30
 
@@ -167,7 +167,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
 
     my_btb.status.size =
         my_btb.size *
-            (1 +               // valid bits
+            (1 +               // valid bit of every branch on the table
              my_btb.tag_size + // tag size
              (isGlobalTable
                   ? 0
@@ -196,10 +196,12 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
     uint32_t tag = getTagFromPC(pc);
     Btb_row_t *row = &my_btb.table[ip];
 
+    uint8_t index = getIndexFSM(row, pc);
+
     // if not new
     if (!(my_btb.table[ip].tag == NEW) && row->tag == tag) {
-        DEBUG_COMMAND(printf("FSM=%d\n", row->fsm_pointer[row->history]);)
-        prediction = (row->fsm_pointer[row->history] < 2 ? false : true);
+        DEBUG_COMMAND(printf("FSM=%d\n", row->fsm_pointer[index]);)
+        prediction = (row->fsm_pointer[index] < 2 ? false : true);
         if (prediction)
             *dst = row->target;
     }
@@ -377,4 +379,25 @@ void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken) {
         if (*fsm_addr > SNT)
             (*fsm_addr)--;
     }
+}
+
+uint8_t getIndexFSM(Btb_row_t *row, uint32_t pc) {
+    // helper var for share mode
+    ShareMode shared_value = my_btb.share_mode;
+    uint8_t mask = (1U << my_btb.history_size) - 1;
+
+    // default case when not_sharing
+    uint8_t index_masked = mask & row->history;
+
+    // prepating index of predict table
+    switch (shared_value) {
+    case using_share_lsb:
+        pc >>= 2;
+        break;
+    case using_share_mid:
+        pc >>= 16;
+        break;
+    }
+    pc &= mask;
+    return index_masked ^= pc;
 }
