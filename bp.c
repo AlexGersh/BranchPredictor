@@ -32,7 +32,7 @@
     : -1)   //-1 invalid input
 typedef enum { SNT, WNT, WT, ST } FSM_ST; // FSM States
 typedef enum { not_using_share, using_share_lsb, using_share_mid } ShareMode;
-typedef char *fsm_p;
+typedef char* fsm_p;
 
 //-----------STRUCTS-----------//
 typedef struct {
@@ -157,12 +157,20 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     }
 
     //init status
+    my_btb.status.size=my_btb.size*(1 + //valid bits
+                                    my_btb.tag_size + //tag size
+                                    my_btb.history_size)+ //history size
 
-    
+    //predictor table
+    +(isGlobalHist ? 1 :0 );
+
     return 0; // success
 }
 
 bool BP_predict(uint32_t pc, uint32_t *dst) {
+
+    //DEBUG
+    printf("BP_predict: pc=0x%x ",pc);
     bool prediction = false;
     if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
@@ -178,6 +186,8 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
         prediction = row->fsm_pointer[row->history];
         *dst = row->target;
     }
+    //DEBUG 
+    printf("*dst=0x%x prediction=%s\n",*dst,(prediction ? "T": "N"));
 
     return prediction;
 }
@@ -185,6 +195,7 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
 // not finished yet
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 
+    DEBUG_COMMAND(printf("BP_update : pc=0x%x targetPc=0x%x taken=%s pred_dst=0x%x \n",pc,targetPc,(taken ? "T":"N"),pred_dst););
     if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
         return;
@@ -215,8 +226,9 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 
 // not finished yet
 void BP_GetStats(SIM_stats *curStats) {
-    //
-    return;
+    curStats->br_num=my_btb.status.br_num;
+    curStats->flush_num=my_btb.status.flush_num;
+    curStats->size=my_btb.status.size;
 }
 
 //-----------FUNC DEFS-----------//
@@ -323,12 +335,12 @@ void printBTB() {
         // Optional: print FSM pointer or content, depending on implementation
         printf("  FSM Pointer: %p\n", (void *)row->fsm_pointer);
     }
-    printf("----\n");
+    printf("------------------------------------------------------\n");
 }
 
 void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken) {
     int history_masked = ((1U << my_btb.history_size) - 1) & row->history;
-    char* fsm_addr = row->fsm_pointer + history_masked;
+    fsm_p fsm_addr = row->fsm_pointer + history_masked;
 
         if (taken) {
             if (*fsm_addr < ST)
