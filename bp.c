@@ -9,6 +9,11 @@
 //-----------DEFINES AND MACROS-----------//
 #define NEW -1
 
+/* we need to save to btb table only 30 bits and not 32, because we know that
+   every addres is 32 bits and has 2 zeros at the end for alignment/
+   So we will save only 30 bits of target at BTB table */
+#define TARGET_BITS_COUNT 30
+
 // function return h.
 //   h=sqrt(n)
 #define H_TO_BITS(n)                                                           \
@@ -19,20 +24,20 @@
      : (n) == 16 ? 4                                                           \
      : (n) == 32 ? 5                                                           \
                  : -1) // -1 invalid input
-#define POW_2(n)\
-    ((n)==0     ? 1 \
-    :(n)==1     ? 2 \
-    :(n)==2     ? 4 \
-    :(n)==3     ? 8 \
-    :(n)==4     ? 16 \
-    :(n)==5     ? 32 \
-    :(n)==6     ? 64 \
-    :(n)==7     ? 128 \
-    :(n)==8     ? 256 \
-    : -1)   //-1 invalid input
+#define POW_2(n)                                                               \
+    ((n) == 0   ? 1                                                            \
+     : (n) == 1 ? 2                                                            \
+     : (n) == 2 ? 4                                                            \
+     : (n) == 3 ? 8                                                            \
+     : (n) == 4 ? 16                                                           \
+     : (n) == 5 ? 32                                                           \
+     : (n) == 6 ? 64                                                           \
+     : (n) == 7 ? 128                                                          \
+     : (n) == 8 ? 256                                                          \
+                : -1)                     //-1 invalid input
 typedef enum { SNT, WNT, WT, ST } FSM_ST; // FSM States
 typedef enum { not_using_share, using_share_lsb, using_share_mid } ShareMode;
-typedef char* fsm_p;
+typedef char *fsm_p;
 
 //-----------STRUCTS-----------//
 typedef struct {
@@ -52,8 +57,8 @@ typedef struct {
     FSM_ST fsm_init_st; // how to init all bimodal predictors
 
     fsm_p predictor_table; // table of all predictors
-    unsigned predictor_table_size;    
-    Btb_row_t *table;      // BTB table
+    unsigned predictor_table_size;
+    Btb_row_t *table; // BTB table
 
     SIM_stats status;
 
@@ -93,7 +98,7 @@ uint32_t getIProwFromPC(uint32_t);
 uint32_t getTagFromPC(uint32_t);
 
 // function gets pointer to row in the BTB. the function init the row
-//function will override exsisting row and his (if any) local predictors
+// function will override exsisting row and his (if any) local predictors
 //@params: BTB_row_t* row - row in the btb
 //                     others - valid params to set the row.
 void setBtbRow(Btb_row_t *, uint32_t tag, uint32_t target, uint8_t history,
@@ -121,10 +126,10 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     my_btb.history_size = historySize;
     my_btb.tag_size = tagSize;
     my_btb.fsm_init_st = (FSM_ST)fsmState;
-    my_btb.usingGlobalHistory = isGlobalHist ? 1:0;
+    my_btb.usingGlobalHistory = isGlobalHist ? 1 : 0;
     my_btb.usingGlobalFSMTable = isGlobalTable;
     my_btb.share_mode = (ShareMode)Shared;
-    my_btb.status=(SIM_stats){0, 0, 0}; // init stats to 0
+    my_btb.status = (SIM_stats){0, 0, 0}; // init stats to 0
     // BTB_SIZE=btbSize*Row_SIZE
     my_btb.table = (Btb_row_t *)malloc(my_btb.size * sizeof(Btb_row_t));
 
@@ -138,7 +143,8 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
        if local history
         predictor array is not shared and
         predictor_arr_size=historySize*fsm_size*Num_of_BTB_rows*/
-    my_btb.predictor_table_size = (isGlobalHist ? 1 : my_btb.size) * predictor_array_size;
+    my_btb.predictor_table_size =
+        (isGlobalHist ? 1 : my_btb.size) * predictor_array_size;
     my_btb.predictor_table = (fsm_p)malloc(my_btb.predictor_table_size);
 
     if (!my_btb.predictor_table) {
@@ -147,7 +153,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     }
 
     // init the predictors fsm
-    for (int i = 0; i <my_btb.predictor_table_size; i++) {
+    for (int i = 0; i < my_btb.predictor_table_size; i++) {
         my_btb.predictor_table[i] = my_btb.fsm_init_st;
     }
 
@@ -157,27 +163,28 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
         setBtbRow(&my_btb.table[i], NEW, 0, 0, fsm_pointer);
     }
 
-    //init status
-    
-    my_btb.status.size=my_btb.size*(1 + //valid bits
-                                    my_btb.tag_size + //tag size
-                                    (isGlobalTable ? 0:my_btb.history_size)+//if globalTable we dont multiply
-                                    +32)+
-                                    // if globalTable we count history size only once
-                                    (isGlobalTable ?my_btb.history_size : 0)+                                    //history size
+    // init status
 
-    //predictor table
-    +(isGlobalHist ? 1:my_btb.size )*POW_2(my_btb.history_size)*2
-    //why -4? no idea but it works
-    -4;
-    
+    my_btb.status.size =
+        my_btb.size *
+            (1 +               // valid bits
+             my_btb.tag_size + // tag size
+             (isGlobalTable
+                  ? 0
+                  : my_btb.history_size) // if globalTable we dont multiply
+             + TARGET_BITS_COUNT)
+        // if globalTable we count history size only once
+        + (isGlobalTable ? my_btb.history_size : 0) // history size
+        // predictor table
+        + (isGlobalHist ? 1 : my_btb.size) * POW_2(my_btb.history_size) * 2;
+
     return 0; // success
 }
 
 bool BP_predict(uint32_t pc, uint32_t *dst) {
 
-    //DEBUG
-    DEBUG_COMMAND(printf("BP_predict: pc=0x%x ",pc));
+    // DEBUG
+    DEBUG_COMMAND(printf("BP_predict: pc=0x%x ", pc));
     bool prediction = false;
     if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
@@ -186,18 +193,19 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
 
     *dst = pc + 4;
     uint32_t ip = getIProwFromPC(pc);
-    uint32_t tag= getTagFromPC(pc);
+    uint32_t tag = getTagFromPC(pc);
     Btb_row_t *row = &my_btb.table[ip];
 
     // if not new
-    if (!(my_btb.table[ip].tag == NEW) && row->tag==tag) {
-        DEBUG_COMMAND( printf("FSM=%d\n",row->fsm_pointer[row->history]);)
-        prediction = (row->fsm_pointer[row->history]<2 ? false : true);
-        if(prediction)
+    if (!(my_btb.table[ip].tag == NEW) && row->tag == tag) {
+        DEBUG_COMMAND(printf("FSM=%d\n", row->fsm_pointer[row->history]);)
+        prediction = (row->fsm_pointer[row->history] < 2 ? false : true);
+        if (prediction)
             *dst = row->target;
     }
-    //DEBUG 
-    DEBUG_COMMAND(printf("*dst=0x%x prediction=%s\n",*dst,(prediction ? "T": "N"));)
+    // DEBUG
+    DEBUG_COMMAND(
+        printf("*dst=0x%x prediction=%s\n", *dst, (prediction ? "T" : "N"));)
 
     return prediction;
 }
@@ -205,7 +213,9 @@ bool BP_predict(uint32_t pc, uint32_t *dst) {
 // not finished yet
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 
-    DEBUG_COMMAND(printf("BP_update : pc=0x%x targetPc=0x%x taken=%s pred_dst=0x%x \n",pc,targetPc,(taken ? "T":"N"),pred_dst););
+    DEBUG_COMMAND(
+        printf("BP_update : pc=0x%x targetPc=0x%x taken=%s pred_dst=0x%x \n",
+               pc, targetPc, (taken ? "T" : "N"), pred_dst););
     if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
         return;
@@ -216,8 +226,8 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
     uint8_t new_history = 0;
     Btb_row_t *row = &my_btb.table[ip];
 
-    //printf("DEBUG : 0x%X\n",targetPc);
-    //existing btb
+    // printf("DEBUG : 0x%X\n",targetPc);
+    // existing btb
     if (!(my_btb.table[ip].tag == NEW) && row->tag == tag) {
         updatePredictor(row, ip, taken);
     } else { // we add new pc to btb
@@ -227,21 +237,21 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 
     row->history = (row->history << 1) | (taken ? 1 : 0);
 
-    //status update
+    // status update
     my_btb.status.br_num++;
-    //quite simple solve no need to explain
-    if( (targetPc==pred_dst) ^taken) {
-        my_btb.status.flush_num++;  
+    // quite simple solve no need to explain
+    if ((targetPc == pred_dst) ^ taken) {
+        my_btb.status.flush_num++;
     }
-    //flush happens when (dst==target and taken==0) or (dst!=target and taken==1)
-
+    // flush happens when (dst==target and taken==0) or (dst!=target and
+    // taken==1)
 }
 
 // not finished yet
 void BP_GetStats(SIM_stats *curStats) {
-    curStats->br_num=my_btb.status.br_num;
-    curStats->flush_num=my_btb.status.flush_num;
-    curStats->size=my_btb.status.size;
+    curStats->br_num = my_btb.status.br_num;
+    curStats->flush_num = my_btb.status.flush_num;
+    curStats->size = my_btb.status.size;
 }
 
 //-----------FUNC DEFS-----------//
@@ -316,11 +326,11 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
     btb_row->history = history;
     btb_row->fsm_pointer = fsm_pointer;
 
-    for(int i=0;i<POW_2(my_btb.history_size)*sizeof(char)*!my_btb.usingGlobalHistory;i++)
-    {
-        btb_row->fsm_pointer[i]=my_btb.fsm_init_st;
+    for (int i = 0; i < POW_2(my_btb.history_size) * sizeof(char) *
+                            !my_btb.usingGlobalHistory;
+         i++) {
+        btb_row->fsm_pointer[i] = my_btb.fsm_init_st;
     }
-
 }
 
 void printBTB() {
@@ -350,9 +360,8 @@ void printBTB() {
     }
 
     printf("\n preidctor table\n");
-    for(int i=0;i<my_btb.predictor_table_size;i++)
-    {
-        printf("FSM=%d\n",my_btb.predictor_table[i]);
+    for (int i = 0; i < my_btb.predictor_table_size; i++) {
+        printf("FSM=%d\n", my_btb.predictor_table[i]);
     }
     printf("------------------------------------------------------\n");
 }
@@ -361,11 +370,11 @@ void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken) {
     int history_masked = ((1U << my_btb.history_size) - 1) & row->history;
     fsm_p fsm_addr = row->fsm_pointer + history_masked;
 
-        if (taken) {
-            if (*fsm_addr < ST)
-                (*fsm_addr)++;
-        } else { // not taken
-            if (*fsm_addr> SNT)
-                (*fsm_addr)--;
-        }
+    if (taken) {
+        if (*fsm_addr < ST)
+            (*fsm_addr)++;
+    } else { // not taken
+        if (*fsm_addr > SNT)
+            (*fsm_addr)--;
+    }
 }
