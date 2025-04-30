@@ -19,7 +19,17 @@
      : (n) == 16 ? 4                                                           \
      : (n) == 32 ? 5                                                           \
                  : -1) // -1 invalid input
-
+#define POW_2(n)\
+    ((n)==0     ? 1 \
+    :(n)==1     ? 2 \
+    :(n)==2     ? 4 \
+    :(n)==3     ? 8 \
+    :(n)==4     ? 16 \
+    :(n)==5     ? 32 \
+    :(n)==6     ? 64 \
+    :(n)==7     ? 128 \
+    :(n)==8     ? 256 \
+    : -1)   //-1 invalid input
 typedef enum { SNT, WNT, WT, ST } FSM_ST; // FSM States
 typedef enum { not_using_share, using_share_lsb, using_share_mid } ShareMode;
 typedef char *fsm_p;
@@ -79,7 +89,8 @@ uint32_t getIProwFromPC(uint32_t);
 // return - uint32_t - TAG
 uint32_t getTagFromPC(uint32_t);
 
-// function gets pointer to row in the BTB. the function sets the row
+// function gets pointer to row in the BTB. the function init the row
+//function will override exsisting row and his (if any) local predictors
 //@params: BTB_row_t* row - row in the btb
 //                     others - valid params to set the row.
 void setBtbRow(Btb_row_t *, uint32_t tag, uint32_t target, uint8_t history,
@@ -90,7 +101,7 @@ void printBTB();
 
 // function update the predictor of given row according to if branch is taken or
 // not
-void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken, bool);
+void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken);
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
             unsigned fsmState, bool isGlobalHist, bool isGlobalTable,
@@ -101,13 +112,13 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
         return -1;
     }
 
-    const int predictor_array_size = historySize * sizeof(char);
+    const int predictor_array_size = POW_2(historySize) * sizeof(char);
     // initializing
     my_btb.size = btbSize;
     my_btb.history_size = historySize;
     my_btb.tag_size = tagSize;
     my_btb.fsm_init_st = (FSM_ST)fsmState;
-    my_btb.usingGlobalHistory = isGlobalHist;
+    my_btb.usingGlobalHistory = isGlobalHist ? 1:0;
     my_btb.usingGlobalFSMTable = isGlobalTable;
     my_btb.share_mode = (ShareMode)Shared;
 
@@ -171,7 +182,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 
     if (!isPCValid(pc)) {
         fprintf(stderr, "PC is not valid\n");
-        return -1;
+        return;
     }
 
     uint32_t ip = getIProwFromPC(pc);
@@ -179,12 +190,15 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
     uint8_t new_history = 0;
     Btb_row_t *row = &my_btb.table[ip];
 
-    if (!(my_btb.table[ip].tag == NEW)) {
-        updatePredictor(row, ip, taken, false);
+    //printf("DEBUG : 0x%X\n",targetPc);
+    //existing btb
+    if (!(my_btb.table[ip].tag == NEW) && row->tag == tag) {
+        updatePredictor(row, ip, taken);
     } else { // we add new pc to btb
         setBtbRow(row, tag, targetPc, new_history, row->fsm_pointer);
-        updatePredictor(row, ip, taken, true);
+        updatePredictor(row, ip, taken);
     }
+
     row->history = (row->history << 1) | (taken ? 1 : 0);
 }
 
@@ -266,7 +280,11 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
     btb_row->history = history;
     btb_row->fsm_pointer = fsm_pointer;
 
-    return;
+    for(int i=0;i<POW_2(my_btb.history_size)*sizeof(char)*!my_btb.usingGlobalHistory;i++)
+    {
+        my_btb.predictor_table[i]=my_btb.fsm_init_st;
+    }
+
 }
 
 void printBTB() {
@@ -297,20 +315,15 @@ void printBTB() {
     printf("----\n");
 }
 
-void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken,
-                     bool isBranchNew) {
+void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken) {
     int history_masked = ((1U << my_btb.history_size) - 1) & row->history;
-    int fsm_addr = row->fsm_pointer + history_masked;
-    FSM_ST fsm_init_st = my_btb.fsm_init_st;
+    char* fsm_addr = row->fsm_pointer + history_masked;
 
-    if (!isBranchNew) {
         if (taken) {
-            if (my_btb.predictor_table[fsm_addr] < ST)
-                my_btb.predictor_table[fsm_addr]++;
+            if (*fsm_addr < ST)
+                (*fsm_addr)++;
         } else { // not taken
-            if (my_btb.predictor_table[fsm_addr] > SNT)
-                my_btb.predictor_table[fsm_addr]--;
+            if (*fsm_addr> SNT)
+                (*fsm_addr)--;
         }
-    } else // the pc is new
-        my_btb.predictor_table[fsm_addr] = fsm_init_st + (taken ? 1 : 0);
 }
