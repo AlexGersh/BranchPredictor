@@ -241,9 +241,10 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
     }
 
     if(my_btb.usingGlobalHistory){
-        for(int i=0;my_btb.size;i++)
+        for(int i=0;i<my_btb.size;i++)
         {
-            my_btb.table->history=(row->history << 1) | (taken ?1 :0);
+        //row->history = (row->history << 1) | (taken ? 1 : 0);
+            (my_btb.table[i]).history=(row->history << 1) | (taken ?1 :0);
         }
     } else {
         row->history = (row->history << 1) | (taken ? 1 : 0);
