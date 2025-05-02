@@ -45,4 +45,5 @@ $(OBJ_GIVEN): %.o: %.c
 
 .PHONY: clean
 clean:
+	rm -f ./outlogs/log*
 	rm -f bp_main $(OBJ)

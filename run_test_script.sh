@@ -17,8 +17,10 @@ for i in $(seq 1 99); do
     ./bp_main "$trace" > "$output"
 
     # Compare output with expected
+
     if diff "$output" "$expected" > /dev/null; then
         echo -e "${GREEN}PASSED${NC}"
+        rm -f ./difflogs/difflog${i}.txt
     else
         echo -e "${RED}FAILED${NC}"
         diff "$output" "$expected" > ./difflogs/difflog${i}.txt
