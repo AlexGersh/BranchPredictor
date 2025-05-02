@@ -169,19 +169,18 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     }
 
     // init status
-
     my_btb.status.size =
         my_btb.size *
             (1 +               // valid bit of every branch on the table
              my_btb.tag_size + // tag size
-             (isGlobalTable
+             (isGlobalHist
                   ? 0
-                  : my_btb.history_size) // if globalTable we dont multiply
+                  : my_btb.history_size) // if globalHist we dont multiply
              + TARGET_BITS_COUNT)
-        // if globalTable we count history size only once
-        + (isGlobalTable ? my_btb.history_size : 0) // history size
+        // if globalHist we count history size only once
+        + (isGlobalHist ? my_btb.history_size : 0) // history size
         // predictor table
-        + (isGlobalHist ? 1 : my_btb.size) * POW_2(my_btb.history_size) * 2;
+        + (isGlobalTable ? 1 : my_btb.size) * POW_2(my_btb.history_size) * 2;
 
     return 0; // success
 }
@@ -345,7 +344,7 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
         btb_row->history = history;
     btb_row->fsm_pointer = fsm_pointer;
 
-    //need to delete 
+    //
     for (int i = 0; i < POW_2(my_btb.history_size) * sizeof(char) *
                             !my_btb.usingGlobalFSMTable;
          i++) {
