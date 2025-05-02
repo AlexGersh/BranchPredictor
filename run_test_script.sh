@@ -7,9 +7,9 @@ NC="\033[0m" # No Color
 
 # Loop through 1 to 99
 for i in $(seq 1 99); do
-    trace="./tests_itai_idan_CA/example${i}.trc"
-    expected="./tests_itai_idan_CA/example${i}.out"
-    output="log${i}.txt"
+    trace="./tests/example${i}.trc"
+    expected="./tests/example${i}.out"
+    output="./outlogs/log${i}.txt"
 
     echo -n "Running test ${i}... "
 
@@ -21,6 +21,7 @@ for i in $(seq 1 99); do
         echo -e "${GREEN}PASSED${NC}"
     else
         echo -e "${RED}FAILED${NC}"
+        diff "$output" "$expected" > ./difflogs/difflog${i}.txt
     fi
 done
 

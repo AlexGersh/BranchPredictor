@@ -13,17 +13,18 @@ extern "C" {
 
 /* A structure to return information about the currect simulator state */
 typedef struct {
-	unsigned flush_num;           // Machine flushes
-	unsigned br_num;      	      // Number of branch instructions
-	unsigned size;		      // Theoretical allocated BTB and branch predictor size
+    unsigned flush_num; // Machine flushes
+    unsigned br_num;    // Number of branch instructions
+    unsigned size;      // Theoretical allocated BTB and branch predictor size
 } SIM_stats;
 
-//#define DEBUG
+// comment or uncomment the next line
+// #define DEBUG
 
 #ifdef DEBUG
-    #define DEBUG_COMMAND(X) X
+#define DEBUG_COMMAND(X) X
 #else
-    #define DEBUG_COMMAND(X)// No-op
+#define DEBUG_COMMAND(X) // No-op
 #endif
 /*************************************************************************/
 /* The following functions should be implemented in your bp.c (or .cpp) */
@@ -34,14 +35,16 @@ typedef struct {
  * all input parameters are set (by the main) as declared in the trace file
  * return 0 on success, otherwise (init failure) return <0
  */
-int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
-bool isGlobalHist, bool isGlobalTable, int Shared);
+int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
+            unsigned fsmState, bool isGlobalHist, bool isGlobalTable,
+            int Shared);
 
 /*
- * BP_predict - returns the predictor's prediction (taken / not taken) and predicted target address
- * param[in] pc - the branch instruction address
- * param[out] dst - the target address (when prediction is not taken, dst = pc + 4)
- * return true when prediction is taken, otherwise (prediction is not taken) return false
+ * BP_predict - returns the predictor's prediction (taken / not taken) and
+ * predicted target address param[in] pc - the branch instruction address
+ * param[out] dst - the target address (when prediction is not taken, dst = pc +
+ * 4) return true when prediction is taken, otherwise (prediction is not taken)
+ * return false
  */
 bool BP_predict(uint32_t pc, uint32_t *dst);
 

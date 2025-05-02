@@ -45,4 +45,4 @@ $(OBJ_GIVEN): %.o: %.c
 
 .PHONY: clean
 clean:
-	del /f /q bp_main $(OBJ)
+	rm -f bp_main $(OBJ)
