@@ -252,12 +252,9 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
     }
     // status update
     my_btb.status.br_num++;
-    // quite simple solve no need to explain
-    if ((targetPc == pred_dst) ^ taken) {
+    if((taken && targetPc != pred_dst) || (!taken && pred_dst != pc+4)){
         my_btb.status.flush_num++;
     }
-    // flush happens when (dst==target and taken==0) or (dst!=target and
-    // taken==1)
 }
 
 // not finished yet
