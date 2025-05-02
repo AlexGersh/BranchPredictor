@@ -147,7 +147,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
         predictor array is not shared and
         predictor_arr_size=historySize*fsm_size*Num_of_BTB_rows*/
     my_btb.predictor_table_size =
-        (isGlobalHist ? 1 : my_btb.size) * predictor_array_size;
+        (isGlobalTable ? 1 : my_btb.size) * predictor_array_size;
     my_btb.predictor_table = (fsm_p)malloc(my_btb.predictor_table_size);
 
     if (!my_btb.predictor_table) {
@@ -162,7 +162,8 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
 
     for (int i = 0; i < my_btb.size; i++) {
         fsm_p fsm_pointer = my_btb.predictor_table +
-                            (isGlobalHist ? 0 : i * predictor_array_size);
+                            (isGlobalTable ? 0 : i * predictor_array_size);
+        //setting GlbobalHistory to false for proper working function setBtbRow
         my_btb.usingGlobalHistory=false;
         setBtbRow(&my_btb.table[i], NEW, 0, 0, fsm_pointer);
         my_btb.usingGlobalHistory=isGlobalHist ? 1 : 0;
@@ -223,7 +224,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
         printf("BP_update : pc=0x%x targetPc=0x%x taken=%s pred_dst=0x%x \n",
                pc, targetPc, (taken ? "T" : "N"), pred_dst););
     if (!isPCValid(pc)) {
-        fprintf(stderr, "PC is not valid\n");
+        fprintf(stderr, "PC=0x%x is not valid\n",pc);
         return;
     }
 
@@ -378,12 +379,16 @@ void printBTB() {
 
     printf("\n preidctor table\n");
     int j = 0;
-    for (int i = 0; i < my_btb.predictor_table_size; i++) {
-        if (j++ == POW_2(my_btb.history_size)) {
+    for (int i = 0; i < my_btb.predictor_table_size; i++) {  
+
+        if (++j == POW_2(my_btb.history_size)) {
             j = 0;
             printf("\n");
+            
         }
         printf("FSM=%d ", my_btb.predictor_table[i]);
+
+        
     }
     printf("\n------------------------------------------------------\n");
 }
