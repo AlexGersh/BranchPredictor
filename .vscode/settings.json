@@ -1,9 +1,0 @@
-{
-    "makefile.launchConfigurations": [
-        {
-            "cwd": "c:\\Users\\timor\\Documents\\comps\\BranchPredictor",
-            "binaryPath": "c:\\Users\\timor\\Documents\\comps\\BranchPredictor\\bp_main",
-            "binaryArgs": []
-        }
-    ]
-}
