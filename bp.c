@@ -364,7 +364,8 @@ void printBTB() {
     printf("Share Mode: %d\n", my_btb.share_mode);
     printf("Initial FSM State: %d\n", my_btb.fsm_init_st);
     printf("PredictorTable %p\n", my_btb.predictor_table);
-
+    printf("PredictorTableSize %d\n", my_btb.predictor_table_size);
+    
     printf("\nBTB Rows:\n");
     Btb_row_t *row = NULL;
     for (int i = 0; i < my_btb.size; ++i) {
@@ -379,15 +380,12 @@ void printBTB() {
 
     printf("\n preidctor table\n");
     int j = 0;
-    for (int i = 0; i < my_btb.predictor_table_size; i++) {  
-
-        if (++j == POW_2(my_btb.history_size)) {
-            j = 0;
-            printf("\n");
-            
+    for (int i = 0; i < my_btb.predictor_table_size;) {  
+        for(int j=0;j<POW_2(my_btb.history_size);j++)
+        {
+            printf("FSM=%d ", my_btb.predictor_table[i++]);
         }
-        printf("FSM=%d ", my_btb.predictor_table[i]);
-
+            printf("\n");
         
     }
     printf("\n------------------------------------------------------\n");
@@ -415,6 +413,8 @@ uint8_t getIndexFSM(Btb_row_t *row, uint32_t pc) {
     // default case when not_sharing
     uint8_t index_masked = mask & row->history;
 
+    if(!my_btb.usingGlobalFSMTable)
+        return index_masked;
     // prepating index of predict table
     switch (shared_value) {
     case not_using_share:
