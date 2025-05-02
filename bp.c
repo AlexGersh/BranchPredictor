@@ -109,7 +109,7 @@ void printBTB();
 
 // function update the predictor of given row according to if branch is taken or
 // not
-void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken);
+void updatePredictor(Btb_row_t *row, uint32_t pc, bool taken);
 
 // function calculate the index of fsm relative to its fsm_pointer.
 // in calulation take in a count if using_shard_lsb or using_shard_mid active
@@ -236,10 +236,10 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
     // printf("DEBUG : 0x%X\n",targetPc);
     // existing btb
     if (!(my_btb.table[ip].tag == NEW) && row->tag == tag) {
-        updatePredictor(row, ip, taken);
+        updatePredictor(row, pc, taken);
     } else { // we add new pc to btb
         setBtbRow(row, tag, targetPc, new_history, row->fsm_pointer);
-        updatePredictor(row, ip, taken);
+        updatePredictor(row, pc, taken);
     }
 
     const uint8_t history=row->history;
@@ -392,8 +392,9 @@ void printBTB() {
     printf("\n------------------------------------------------------\n");
 }
 
-void updatePredictor(Btb_row_t *row, uint32_t ip, bool taken) {
-    int history_masked = ((1U << my_btb.history_size) - 1) & row->history;
+void updatePredictor(Btb_row_t *row, uint32_t pc, bool taken) {
+    //int history_masked = ((1U << my_btb.history_size) - 1) & row->history;
+    int history_masked = getIndexFSM(row, pc);
     fsm_p fsm_addr = row->fsm_pointer + history_masked;
 
     if (taken) {
@@ -415,6 +416,8 @@ uint8_t getIndexFSM(Btb_row_t *row, uint32_t pc) {
 
     // prepating index of predict table
     switch (shared_value) {
+    case not_using_share:
+        return index_masked;
     case using_share_lsb:
         pc >>= 2;
         break;
