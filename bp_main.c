@@ -79,6 +79,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Predictor init failed\n");
 		exit(8);
 	}
+	DEBUG_COMMAND(printBTB(););
 
 	while ((fgets(line, 256, trace) != NULL)) {
 		if (line[0] == '\n') {

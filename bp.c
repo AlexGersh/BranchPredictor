@@ -130,7 +130,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     my_btb.tag_size = tagSize;
     my_btb.fsm_init_st = (FSM_ST)fsmState;
     my_btb.usingGlobalHistory = isGlobalHist ? 1 : 0;
-    my_btb.usingGlobalFSMTable = isGlobalTable;
+    my_btb.usingGlobalFSMTable = isGlobalTable ? 1: 0;
     my_btb.share_mode = (ShareMode)Shared;
     my_btb.status = (SIM_stats){0, 0, 0}; // init stats to 0
     // BTB_SIZE=btbSize*Row_SIZE
@@ -163,7 +163,9 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize,
     for (int i = 0; i < my_btb.size; i++) {
         fsm_p fsm_pointer = my_btb.predictor_table +
                             (isGlobalHist ? 0 : i * predictor_array_size);
+        my_btb.usingGlobalHistory=false;
         setBtbRow(&my_btb.table[i], NEW, 0, 0, fsm_pointer);
+        my_btb.usingGlobalHistory=isGlobalHist ? 1 : 0;
     }
 
     // init status
@@ -240,10 +242,11 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
         updatePredictor(row, ip, taken);
     }
 
+    const uint8_t history=row->history;
     if (my_btb.usingGlobalHistory) {
         for (int i = 0; i < my_btb.size; i++) {
             // row->history = (row->history << 1) | (taken ? 1 : 0);
-            (my_btb.table[i]).history = (row->history << 1) | (taken ? 1 : 0);
+            (my_btb.table[i]).history = (history << 1) | (taken ? 1 : 0);
         }
     } else {
         row->history = (row->history << 1) | (taken ? 1 : 0);
@@ -342,11 +345,13 @@ void setBtbRow(Btb_row_t *btb_row, uint32_t tag, uint32_t target,
         btb_row->history = history;
     btb_row->fsm_pointer = fsm_pointer;
 
+    //need to delete 
     for (int i = 0; i < POW_2(my_btb.history_size) * sizeof(char) *
-                            !my_btb.usingGlobalHistory;
+                            !my_btb.usingGlobalFSMTable;
          i++) {
         btb_row->fsm_pointer[i] = my_btb.fsm_init_st;
     }
+        
 }
 
 void printBTB() {
